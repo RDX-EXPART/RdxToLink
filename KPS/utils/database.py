@@ -8,6 +8,9 @@ from KPS.utils.logger import logger
 
 class Database:
     def __init__(self, uri: str, database_name: str, *args, **kwargs):
+        kwargs.setdefault("serverSelectionTimeoutMS", 15000)
+        kwargs.setdefault("connectTimeoutMS", 15000)
+        kwargs.setdefault("socketTimeoutMS", 20000)
         self._client = AsyncIOMotorClient(uri, *args, **kwargs)
         self.db = self._client[database_name]
         self.col: AsyncIOMotorCollection = self.db.users

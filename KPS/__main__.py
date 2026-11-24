@@ -23,6 +23,7 @@ from KPS.utils.handler import handle_flood_wait
 from KPS.utils.keepalive import ping_server
 from KPS.utils.logger import logger
 from KPS.utils.messages import MSG_ADMIN_RESTART_DONE
+from KPS.utils.payment_access import heartbeat_loop, is_payment_enabled
 from KPS.utils.rate_limiter import rate_limiter, request_executor
 from KPS.utils.tokens import cleanup_expired_tokens
 from KPS.vars import Var
@@ -92,7 +93,21 @@ async def start_services():
 
     print("   ▶ Starting Telegram Bot initialization...")
     try:
-        await handle_flood_wait(StreamBot.start)
+        for attempt in range(1, 6):
+            try:
+                await handle_flood_wait(StreamBot.start)
+                break
+            except Exception as start_exc:
+                if attempt >= 5:
+                    raise
+                delay = min(30, 3 * attempt)
+                logger.warning(
+                    "StreamBot.start() attempt %s/5 failed (%s); retrying in %ss...",
+                    attempt,
+                    start_exc,
+                    delay,
+                )
+                await asyncio.sleep(delay)
         bot_info = await handle_flood_wait(StreamBot.get_me)
         StreamBot.username = bot_info.username
         print(f"   ✓ Bot initialized successfully as @{StreamBot.username}")
@@ -161,6 +176,12 @@ async def start_services():
         token_cleanup_task = asyncio.create_task(
             schedule_token_cleanup(), name="token_cleanup_task"
         )
+        payment_heartbeat_task = None
+        if is_payment_enabled():
+            payment_heartbeat_task = asyncio.create_task(
+                heartbeat_loop(StreamBot.username), name="payment_heartbeat_task"
+            )
+            print(f"   ✓ Central payment heartbeat started ({Var.PAYMENT_SERVICE_ID})")
 
     except Exception as e:
         logger.error(f"   ✖ Failed to start Web Server: {e}", exc_info=True)
@@ -197,8 +218,10 @@ async def start_services():
     background_tasks = [
         request_executor_task,
         keepalive_task,
-        token_cleanup_task
+        token_cleanup_task,
     ]
+    if payment_heartbeat_task is not None:
+        background_tasks.append(payment_heartbeat_task)
 
     try:
         await idle()

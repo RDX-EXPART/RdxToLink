@@ -102,3 +102,12 @@ class Var:
     MAX_FILES_PER_PERIOD: int = int(os.getenv("MAX_FILES_PER_PERIOD", "2"))
     RATE_LIMIT_PERIOD_MINUTES: int = int(os.getenv("RATE_LIMIT_PERIOD_MINUTES", "1"))
     MAX_QUEUE_SIZE: int = int(os.getenv("MAX_QUEUE_SIZE", "100"))
+
+    # Central RDX-Payment-Verify integration
+    PAYMENT_API_URL: str = os.getenv("PAYMENT_API_URL", "").strip().rstrip("/")
+    PAYMENT_API_KEY: str = os.getenv("PAYMENT_API_KEY", "").strip()
+    PAYMENT_BOT_USERNAME: str = os.getenv("PAYMENT_BOT_USERNAME", "verifyrdxbot").strip().lstrip("@")
+    PAYMENT_SERVICE_ID: str = os.getenv("PAYMENT_SERVICE_ID", "rdxtolink").strip().lower()
+    PAYMENT_SERVICE_NAME: str = os.getenv("PAYMENT_SERVICE_NAME", "RDX File To Link").strip()
+    PAYMENT_HEARTBEAT_SECONDS: int = int(os.getenv("PAYMENT_HEARTBEAT_SECONDS", "60"))
+    PAYMENT_FAIL_OPEN: bool = str_to_bool(os.getenv("PAYMENT_FAIL_OPEN", "False"))
