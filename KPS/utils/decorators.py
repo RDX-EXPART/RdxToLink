@@ -7,9 +7,6 @@ from KPS.utils.handler import handle_flood_wait
 from KPS.utils.logger import logger
 from KPS.utils.messages import (MSG_DECORATOR_BANNED,
                                     MSG_ERROR_UNAUTHORIZED, MSG_TOKEN_INVALID)
-from KPS.utils.payment_access import (build_access_prompt,
-                                      check_central_access,
-                                      is_payment_enabled)
 from KPS.utils.shortener import shorten
 from KPS.utils.tokens import allowed, check, generate
 from KPS.vars import Var
@@ -51,26 +48,10 @@ async def require_token(client, message: Message):
         if not message.from_user:
             return True
 
-        user_id = message.from_user.id
-        if is_payment_enabled():
-            if user_id == Var.OWNER_ID or await allowed(user_id):
-                return True
-            access = await check_central_access(user_id)
-            if access.get("allowed"):
-                return True
-            prompt_text, prompt_markup = build_access_prompt()
-            await handle_flood_wait(
-                message.reply_text,
-                prompt_text,
-                reply_markup=prompt_markup,
-                quote=True,
-            )
-            logger.debug(f"Sent central RDX-Payment-Verify prompt to user {user_id} (mode={access.get('mode')}).")
-            return False
-
         if not getattr(Var, "TOKEN_ENABLED", False):
             return True
 
+        user_id = message.from_user.id
         if user_id == Var.OWNER_ID or await allowed(user_id) or await check(user_id):
             return True
 
@@ -128,10 +109,6 @@ async def get_shortener_status(client, message: Message):
             try:
                 if user_id == Var.OWNER_ID or await allowed(user_id):
                     use_shortener = False
-                elif use_shortener and is_payment_enabled():
-                    access = await check_central_access(user_id)
-                    if access.get("mode") == "premium":
-                        use_shortener = False
             except Exception as e:
                 logger.warning(f"Error checking allowed status for user {user_id} in get_shortener_status: {e}. Defaulting shortener behavior.", exc_info=True)
         return use_shortener
